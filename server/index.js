@@ -22,6 +22,13 @@ io.on("connection", (socket) => {
     // console.log(ans, "from pj");
   });
 
+  socket.on('peer:nego:needed',({to,offer})=>{
+    io.to(to).emit("peer:nego:needed", { from: socket.id, offer });
+  })
+  socket.on('peer:nego:done',({to,ans})=>{
+    io.to(to).emit("peer:nego:final", { from: socket.id, ans });
+  })
+
   socket.on("disconnect", () => {
     console.log(socket.id, "disconnected");
   });
