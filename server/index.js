@@ -5,6 +5,9 @@ const io = new Server(8000, {
 });
 
 io.on("connection", (socket) => {
+  console.log(socket.id);
+  socket.emit("connected");
+  console.log("emitted");
   socket.on("join", (roomId) => {
     socket.join(roomId);
     socket.to(roomId).emit("joined", { userId: socket.id });
@@ -18,16 +21,15 @@ io.on("connection", (socket) => {
   });
 
   socket.on("call:answered", ({ ans, caller }) => {
-    io.to(caller).emit('call:started', {ans, from: socket.id})
-    // console.log(ans, "from pj");
+    io.to(caller).emit("call:started", { ans, from: socket.id });
   });
 
-  socket.on('peer:nego:needed',({to,offer})=>{
+  socket.on("peer:nego:needed", ({ to, offer }) => {
     io.to(to).emit("peer:nego:needed", { from: socket.id, offer });
-  })
-  socket.on('peer:nego:done',({to,ans})=>{
+  });
+  socket.on("peer:nego:done", ({ to, ans }) => {
     io.to(to).emit("peer:nego:final", { from: socket.id, ans });
-  })
+  });
 
   socket.on("disconnect", () => {
     console.log(socket.id, "disconnected");
