@@ -1,97 +1,55 @@
 "use client";
 import { useEffect, useCallback, useRef, useState } from "react";
 import peer from "@/app/Providers/peer";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import socket from "@/app/Providers/client-server";
 import useStream from "@/app/_hooks/useStream";
+import { useMediaFunctions } from "@/app/mediaUtils";
+import Image from "next/image";
+import ChatBox from "@/app/_components/ChatBox";
+import Bottombar from "@/app/_components/bottombar";
 
 const Page = () => {
+  const {
+    handleMute,
+    handleSendAudio,
+    show,
+    sendAudio,
+    handleHide,
+    handleShow,
+  } = useMediaFunctions();
   const videoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const param = useParams();
   const [opp, setOpp] = useState<string>("");
-  const {stream,setStream}=useStream()
+  const router = useRouter();
+  const { stream, setStream } = useStream();
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
-  const [mute,setMute]=useState(false)
-  const [showVideo,setShowVideo]=useState(true)
-  const [connect,setConnect]=useState(false)
 
-  const handleJoined = useCallback((data: { userId: string }) => {
+  // useEffect(() => { logic to push to lobby if not logged in
+  //   if (!socket.active) {
+  //     router.push("/");
+  //   }
+  // }, [socket]);
+
+  useEffect(() => {
+    console.log("rannnnn");
+    videoRef.current!.srcObject = stream;
+    console.log(videoRef);
+  }, [stream]);
+
+  const handleJoined = useCallback(async (data: { userId: string }) => {
     setOpp(data.userId);
     console.log(`${data.userId} connected to the Room`);
-    // handleCall
+    handleCall();
   }, []);
 
-  // useEffect(() => {
-  //   const getMedia = async () => {
-
-  //     if (stream) {
-
-  //       stream.getTracks().forEach(track => track.stop());
-  //       if(!mute && !showVideo){
-  //         return
-  //       }
-  //     }
-
-  //     const streamY = mute || showVideo ? await navigator.mediaDevices.getUserMedia({
-  //       video: showVideo,
-  //       audio: mute,
-  //     }) : null;
-  
-  //     if (videoRef.current) {
-  //       if (streamY) {
-  //         videoRef.current.srcObject = streamY;
-  //       } else {
-  //         videoRef.current.srcObject = null;
-  //       }
-  //     }
-  
-  //     if (streamY) {
-  //       if (stream) {
-  //         const senders = peer.peer.getSenders();
-  //         const tracksToRemove = stream.getTracks().filter((track) => {
-  //           // Check if the track is already being sent
-  //           return senders.some((sender) => sender.track === track);
-  //         });
-  
-  //         // Remove only tracks that are already associated with a sender
-  //         tracksToRemove.forEach((track) => {
-  //           track.stop();
-  //           senders.forEach((sender) => {
-  //             if (sender.track === track) {
-  //               peer.peer.removeTrack(sender);
-  //             }
-  //           });
-  //         });
-  //       }
-  
-  //       peer.peer.addTrack(streamY.getTracks()[0], streamY);
-  //       setStream(streamY);
-  //     } else {
-  //       setStream(null);
-  //     }
-  //   };
-  
-  //   getMedia();
-  // }, [mute, showVideo]);
-  
-  useEffect(()=>{
-    videoRef.current!.srcObject = stream;
-  },[stream])
-
-  const stopmyfeed=useCallback(()=>{
-    if (stream) {
-      console.log(stream)
-      stream.getTracks().forEach(track =>track.stop());
-      setConnect(false)
-      videoRef.current!.srcObject=null
-      console.log(stream)
-    }
-  },[stream])
-
   const handleCall = useCallback(async () => {
-    const offer = await peer.getOffer();
-    socket.emit("call:initiated", { to: opp, offer });
+    if (opp) {
+      // console.log("ransd", opp);
+      const offer = await peer.getOffer();
+      socket.emit("call:initiated", { to: opp, offer });
+    }
   }, [opp, socket]);
 
   const handleCallReceived = useCallback(
@@ -102,17 +60,6 @@ const Page = () => {
       caller: string;
       offer: RTCSessionDescriptionInit;
     }) => {
-      setOpp(caller);
-      const streamY = await navigator.mediaDevices.getUserMedia({
-        video: {
-          height: 200,
-          width: 200,
-        },
-      });
-      if (videoRef.current) {
-        videoRef.current.srcObject = streamY;
-      }
-      setStream(streamY);
       console.log("incoming call ", offer, "from", caller);
       const ans = await peer.getAnswer(offer);
       socket.emit("call:answered", { ans, caller });
@@ -131,12 +78,10 @@ const Page = () => {
         peer.peer.addTrack(track, stream);
       });
     }
-  }, [stream]);
-
+  }, []);
   const handleCallStarted = useCallback(
     ({ ans, from }: { ans: RTCLocalSessionDescriptionInit; from: string }) => {
       peer.setLocalDescription(ans);
-      console.log("OK");
       sendStreams();
     },
     [sendStreams]
@@ -165,6 +110,7 @@ const Page = () => {
       console.log(offer);
       const ans = await peer.getAnswer(offer);
       socket.emit("peer:nego:done", { to: from, ans });
+      sendStreams();
     },
     [socket]
   );
@@ -179,13 +125,14 @@ const Page = () => {
   useEffect(() => {
     peer.peer.addEventListener("track", async (e) => {
       const remoteStream = e.streams;
-      console.log("Got Tracks!!");
-      console.log(remoteStream);
+      remoteStream[0].getTracks().forEach((track) => console.log(track));
       setRemoteStream(remoteStream[0]);
       if (remoteVideoRef.current) {
-        console.log("lkjhj");
         remoteVideoRef.current.srcObject = remoteStream[0];
       }
+      remoteStream[0]
+        .getTracks()
+        .forEach((track) => console.log(track.enabled));
     });
   }, []);
 
@@ -213,36 +160,50 @@ const Page = () => {
   ]);
 
   return (
-    <div className="flex flex-col justify-center items-center">
-      {videoRef && <div className="relative">
-        <p className="absolute top-0">You</p>
+    <>
+      <div className="flex justify-center items-center flex-col h-screen">
+        <div className="absolute top-2 left-2 text-[#C0B9DD] flex justify-center items-center flex-col">
+          <Image
+            height={40}
+            width={80}
+            alt=""
+            src="/logo.svg"
+            className="drop-shadow-2xl"
+          />
+          <p>
+            By: <span className="text-[#80A1D4]">Farzad</span> &{" "}
+            <span className="text-[#80A1D4]">Pulkit</span>
+          </p>
+        </div>
+        <div className="flex gap-2 px-5 flex-col md:flex-row">
+          <div className="relative flex justify-center ">
+            <div className="relative  rounded-2xl">
+                <>
+                  <p className="absolute top-0">{opp}</p>
+                  <video
+                    // poster="/green.png"
+                    height={740}
+                    width={940}
+                    ref={remoteVideoRef}
+                    autoPlay
+                    className="rounded-2xl z-40 object-fit custom"
+                  ></video>
+                </>
+            </div>
+          </div>
+        </div>
         <video
-          autoPlay
-          playsInline
-          controls={false}
+          poster="/green.png"
+          height={740}
+          width={340}
           ref={videoRef}
-          className="h-200 w-200"
-        ></video>
-      </div>}
-      <div className="relative">
-        <p className="absolute top-0">Opp</p>
-        <video
           autoPlay
-          playsInline
-          controls={false}
-          ref={remoteVideoRef}
+          className="absolute bottom-4 right-5 rounded-2xl object-fit"
         ></video>
+        <ChatBox />
+        <Bottombar videoRef={videoRef} handleCall={handleCall} />
       </div>
-      <div>This is Room Page: {param.roomId}</div>
-      {stream && <button onClick={sendStreams}>Send Stream</button>}
-      <ul>{opp}</ul>
-      {/* <button onClick={handleCall}>Call</button>
-      <button onClick={()=>setMute(prev=>!prev)}>{mute?'unmute':'mute'}</button>
-      <button onClick={()=>setShowVideo(prev=>!prev)}>{!showVideo?'show':'hide'}</button> */}
-      {/* <button onClick={showmyfeed}>Show my video</button> */}
-      <button onClick={stopmyfeed}>Stop my video</button>
-      {/* <button onClick={getMedia}>Connect</button> */}
-    </div>
+    </>
   );
 };
 

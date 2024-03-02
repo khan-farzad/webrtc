@@ -1,3 +1,49 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.custom{
+    box-shadow: rgba(0, 0, 0, 0.5) 3px 3px 3px 0px,
+    rgb(244, 242, 246) -1px -1px 1px 0px ;
+  }
+  .custom2{
+    box-shadow: rgb(176, 173, 173) 3.2px 3.4px 2px 0px inset,
+    rgb(231, 230, 234) -1px -2px 2px 0px inset;
+  }
+  .custom3{
+    box-shadow: rgb(176, 173, 173) 3.2px 3.4px 2px 0px inset,
+    rgb(231, 230, 234) -1px -2px 2px 0px inset;
+  }
+.glas{
+background: rgba(255, 255, 255, 0.2);
+border-radius: 16px;
+box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+backdrop-filter: blur(5px);
+-webkit-backdrop-filter: blur(5px);
+border: 1px solid rgba(255, 255, 255, 0.3);
+}
+@keyframes alternateBackground {
+  0%,100% {
+    background-image: url("/backg2.jpeg");
+  }
+  50% {
+    background-image: url("/backg.jpeg");
+  }
+}
+.bgcustom{
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  background-image: url("/backg2.jpeg");
+  background-size: cover;
+  background-position: center;
+  animation: alternateBackground 3s infinite alternate;
+}
+.eagle{
+  font-family: "Eagle Lake", serif;
+  font-weight: 400;
+  font-style: normal;
+}

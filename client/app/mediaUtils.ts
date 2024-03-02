@@ -1,6 +1,11 @@
-// mediaUtils.ts
 import { useState, useCallback } from 'react';
 import useStream from './_hooks/useStream';
+import { type ClassValue, clsx } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
 
 export const useMediaFunctions = () => {
   const [sendAudio, setSendAudio] = useState(true);
@@ -33,6 +38,7 @@ export const useMediaFunctions = () => {
     stream?.addTrack(tempTrack);
     stream?.getTracks().forEach(track => console.log(track));
     videoRef.current!.srcObject = stream;
+    console.log(videoRef)
     setShow(true);
   }, [stream]);
 
